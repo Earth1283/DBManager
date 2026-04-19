@@ -5,7 +5,7 @@ import org.bukkit.plugin.java.JavaPlugin
 
 class DBManager : JavaPlugin() {
     companion object {
-        lateinit var connectionManager: ConnectionManager
+        var connectionManager: ConnectionManager? = null
             private set
         var webServer: io.github.earth1283.dBManager.web.WebServer? = null
             private set
@@ -13,8 +13,9 @@ class DBManager : JavaPlugin() {
 
     override fun onEnable() {
         saveDefaultConfig()
-        connectionManager = ConnectionManager(dataFolder)
-        connectionManager.loadFromConfig(config.getConfigurationSection("databases"))
+        val manager = ConnectionManager(dataFolder)
+        manager.loadFromConfig(config.getConfigurationSection("databases"))
+        connectionManager = manager
         
         getCommand("dbmanager")?.setExecutor(io.github.earth1283.dBManager.commands.DBCommand())
 
@@ -25,13 +26,11 @@ class DBManager : JavaPlugin() {
             logger.info("Web UI started on port $port")
         }
         
-        logger.info("DBManager initialized ${connectionManager.getAvailableDatabases().size} pools.")
+        logger.info("DBManager initialized ${connectionManager?.getAvailableDatabases()?.size ?: 0} pools.")
     }
 
     override fun onDisable() {
         webServer?.stop()
-        if (::connectionManager.isInitialized) {
-            connectionManager.closeAll()
-        }
+        connectionManager?.closeAll()
     }
 }

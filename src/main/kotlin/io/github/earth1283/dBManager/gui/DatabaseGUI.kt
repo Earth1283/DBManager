@@ -10,7 +10,7 @@ import org.bukkit.inventory.ItemStack
 object DatabaseGUI {
 
     fun openDatabaseList(player: Player) {
-        val dbs = DBManager.connectionManager.getAvailableDatabases()
+        val dbs = DBManager.connectionManager?.getAvailableDatabases() ?: emptySet()
         val inv = Bukkit.createInventory(null, 27, "§8Select Database (Experimental)")
         
         dbs.forEachIndexed { index, name ->
@@ -26,7 +26,7 @@ object DatabaseGUI {
     }
 
     fun openTableList(player: Player, dbName: String) {
-        val ds = DBManager.connectionManager.getDataSource(dbName) ?: return
+        val ds = DBManager.connectionManager?.getDataSource(dbName) ?: return
         val tables = DatabaseExplorer.getTables(ds)
         val inv = Bukkit.createInventory(null, 54, "§8Tables: $dbName")
         

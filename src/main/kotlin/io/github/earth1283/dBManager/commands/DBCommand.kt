@@ -24,7 +24,7 @@ class DBCommand : CommandExecutor {
 
         when (args[0].lowercase()) {
             "list" -> {
-                val dbs = DBManager.connectionManager.getAvailableDatabases()
+                val dbs = DBManager.connectionManager?.getAvailableDatabases() ?: emptySet()
                 sender.sendMessage("Databases: ${dbs.joinToString()}")
             }
             "execute" -> {
@@ -34,7 +34,7 @@ class DBCommand : CommandExecutor {
                 }
                 val dbName = args[1]
                 val sql = args.drop(2).joinToString(" ")
-                val ds = DBManager.connectionManager.getDataSource(dbName)
+                val ds = DBManager.connectionManager?.getDataSource(dbName)
                 if (ds == null) {
                     sender.sendMessage("Database not found: $dbName")
                     return true
@@ -58,7 +58,7 @@ class DBCommand : CommandExecutor {
                 val token = java.util.UUID.randomUUID().toString()
                 // valid for 5 minutes
                 DBManager.webServer?.pendingTokens?.put(token, System.currentTimeMillis() + 300000)
-                val port = DBManager.getPlugin(DBManager::class.java).config.getInt("web-ui.port", 8080)
+                val port = org.bukkit.plugin.java.JavaPlugin.getPlugin(DBManager::class.java).config.getInt("web-ui.port", 8080)
                 sender.sendMessage("Web UI login token generated. Valid for 5 minutes.")
                 sender.sendMessage("Link: http://your-server-ip:$port/?token=$token")
             }
