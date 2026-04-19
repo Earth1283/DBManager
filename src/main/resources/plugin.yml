@@ -7,3 +7,9 @@ api-version: '1.20'
 load: STARTUP
 
 authors: [ Earth1283 ]
+
+commands:
+  dbmanager:
+    description: Manage databases
+    aliases: [db]
+    permission: dbmanager.admin

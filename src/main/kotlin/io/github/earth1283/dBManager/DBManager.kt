@@ -13,6 +13,9 @@ class DBManager : JavaPlugin() {
         saveDefaultConfig()
         connectionManager = ConnectionManager(dataFolder)
         connectionManager.loadFromConfig(config.getConfigurationSection("databases"))
+        
+        getCommand("dbmanager")?.setExecutor(io.github.earth1283.dBManager.commands.DBCommand())
+        
         logger.info("DBManager initialized ${connectionManager.getAvailableDatabases().size} pools.")
     }
 
