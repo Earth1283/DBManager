@@ -1,58 +1,595 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DBManager Dashboard</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f7f6; margin: 0; display: flex; height: 100vh; }
-        #sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; flex-shrink: 0; }
-        #content { flex-grow: 1; padding: 40px; overflow-y: auto; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { margin-top: 0; }
-        select, textarea, button { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #ddd; }
-        textarea { height: 100px; font-family: monospace; }
-        button { background: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; }
-        button:hover { background: #2980b9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; }
-        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .hidden { display: none !important; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DBManager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+
+/* ─── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --bg:          #0c0d12;
+  --surface:     #11131b;
+  --card:        #181b26;
+  --card-hi:     #1e2232;
+  --border:      #232739;
+  --border-hi:   #2e3450;
+  --accent:      #7c6ef7;
+  --accent-dim:  rgba(124,110,247,.1);
+  --accent-med:  rgba(124,110,247,.22);
+  --sky:         #38bdf8;
+  --sky-dim:     rgba(56,189,248,.1);
+  --green:       #4ade80;
+  --green-dim:   rgba(74,222,128,.1);
+  --red:         #f87171;
+  --red-dim:     rgba(248,113,113,.1);
+  --amber:       #fbbf24;
+  --amber-dim:   rgba(251,191,36,.1);
+  --text:        #8896b0;
+  --text-hi:     #dde6f4;
+  --text-lo:     #3a4e68;
+  --sans:        'Inter', system-ui, sans-serif;
+  --mono:        'JetBrains Mono', 'Fira Code', monospace;
+  --r:           8px;
+  --r-sm:        5px;
+  --sidebar-w:   256px;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13px; line-height: 1.5; overflow: hidden; }
+
+/* ─── SCROLLBARS ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 99px; }
+
+/* ─── TOASTS ─────────────────────────────────────────────── */
+#toasts { position: fixed; top: 16px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 10000; pointer-events: none; }
+.toast {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--card); border: 1px solid var(--border-hi);
+  border-radius: var(--r); padding: 11px 14px; max-width: 360px;
+  font-size: 12.5px; color: var(--text-hi);
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  transform: translateX(110%); opacity: 0;
+  transition: transform .2s cubic-bezier(.22,1,.36,1), opacity .2s;
+  pointer-events: auto;
+}
+.toast.show { transform: translateX(0); opacity: 1; }
+.toast-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.toast-info    .toast-icon { color: var(--sky); }
+.toast-success .toast-icon { color: var(--green); }
+.toast-error   .toast-icon { color: var(--red); }
+.toast-warning .toast-icon { color: var(--amber); }
+
+/* ─── AUTH ───────────────────────────────────────────────── */
+#auth-screen {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,110,247,.12) 0%, transparent 70%), var(--bg);
+  z-index: 5000;
+}
+.auth-card {
+  background: var(--card); border: 1px solid var(--border-hi);
+  border-radius: 16px; padding: 40px 48px;
+  display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(124,110,247,.15);
+  max-width: 360px; width: 90vw;
+}
+.auth-logo {
+  width: 56px; height: 56px; background: var(--accent-dim); border: 1px solid var(--accent-med);
+  border-radius: 14px; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; animation: auth-pulse 3s ease-in-out infinite;
+}
+@keyframes auth-pulse { 0%,100%{box-shadow:0 0 0 0 var(--accent-med)} 50%{box-shadow:0 0 0 8px transparent} }
+.auth-title { font-size: 18px; font-weight: 600; color: var(--text-hi); letter-spacing: -.01em; }
+.auth-sub { font-size: 13px; color: var(--text); }
+#auth-status { font-size: 12px; color: var(--text-lo); font-family: var(--mono); }
+.auth-hint {
+  font-size: 12px; color: var(--text-lo); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--r-sm); padding: 8px 14px; width: 100%;
+}
+.auth-hint kbd {
+  background: var(--card-hi); border: 1px solid var(--border-hi);
+  border-radius: 4px; padding: 1px 6px; font-family: var(--mono); font-size: 11px; color: var(--accent);
+}
+
+/* ─── LAYOUT ─────────────────────────────────────────────── */
+#app { display: flex; height: 100vh; }
+
+/* ─── SIDEBAR ────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sidebar-logo {
+  width: 28px; height: 28px; background: var(--accent-dim); border: 1px solid var(--accent-med);
+  border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.sidebar-name { font-size: 13px; font-weight: 600; color: var(--text-hi); flex: 1; letter-spacing: -.01em; }
+.icon-btn {
+  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: var(--text-lo); border-radius: var(--r-sm);
+  font-size: 15px; transition: background .12s, color .12s;
+}
+.icon-btn:hover { background: var(--card); color: var(--text); }
+
+.sidebar-section {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text-lo); padding: 14px 16px 6px; flex-shrink: 0;
+}
+.db-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
+.db-empty { font-size: 12px; color: var(--text-lo); padding: 8px 8px; }
+
+.db-item { border-radius: var(--r-sm); overflow: hidden; margin-bottom: 1px; }
+.db-row {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  cursor: pointer; user-select: none; border-radius: var(--r-sm);
+  transition: background .12s;
+}
+.db-row:hover { background: var(--card); }
+.db-item.active > .db-row { background: var(--accent-dim); }
+.db-item.active > .db-row .db-name { color: var(--accent); }
+.db-arrow { font-size: 9px; color: var(--text-lo); transition: transform .15s; flex-shrink: 0; line-height: 1; }
+.db-arrow.open { transform: rotate(90deg); color: var(--accent); }
+.db-name { flex: 1; font-size: 12.5px; color: var(--text-hi); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--text-lo); flex-shrink: 0; }
+.db-indicator.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+.db-tables { padding: 2px 0 4px 26px; }
+.db-table-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 8px; border-radius: var(--r-sm); cursor: pointer;
+  font-size: 11.5px; font-family: var(--mono); color: var(--text);
+  transition: background .1s, color .1s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.db-table-item:hover { background: var(--card); color: var(--text-hi); }
+.db-table-icon { font-size: 9px; color: var(--text-lo); flex-shrink: 0; }
+.db-table-loading { font-size: 11px; color: var(--text-lo); padding: 4px 8px; font-style: italic; }
+
+.sidebar-footer { padding: 10px 8px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.btn-sidebar-add {
+  width: 100%; padding: 8px 12px; background: none; border: 1px dashed var(--border-hi);
+  border-radius: var(--r-sm); color: var(--text); font-size: 12px; font-weight: 500;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.btn-sidebar-add:hover { border-color: var(--accent-med); background: var(--accent-dim); color: var(--accent); }
+
+/* ─── MAIN ───────────────────────────────────────────────── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+.tab-bar {
+  display: flex; align-items: center;
+  border-bottom: 1px solid var(--border); background: var(--surface);
+  padding: 0 4px; gap: 2px; flex-shrink: 0; height: 44px;
+}
+.tab {
+  position: relative; padding: 6px 14px; background: none; border: none;
+  font-size: 12.5px; font-weight: 500; color: var(--text-lo); border-radius: var(--r-sm);
+  transition: background .12s, color .12s;
+}
+.tab:hover { background: var(--card); color: var(--text); }
+.tab.active { color: var(--accent); background: var(--accent-dim); }
+
+/* ─── QUERY TAB ──────────────────────────────────────────── */
+#tab-query { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.query-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.db-badge {
+  font-size: 12px; font-family: var(--mono);
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 4px 10px; color: var(--text-lo);
+  transition: border-color .15s, color .15s;
+}
+.db-badge.active { color: var(--accent); border-color: var(--accent-med); background: var(--accent-dim); }
+.query-timing { font-size: 11.5px; color: var(--text-lo); font-family: var(--mono); margin-left: auto; }
+
+.editor-wrap { flex-shrink: 0; position: relative; }
+#sql-input {
+  display: block; width: 100%;
+  background: var(--surface); border: none; border-bottom: 1px solid var(--border);
+  color: var(--text-hi); font: 13px/1.7 var(--mono);
+  padding: 14px 16px; outline: none; resize: none; height: 152px;
+  caret-color: var(--accent);
+  transition: background .15s;
+}
+#sql-input:focus { background: var(--bg); }
+#sql-input::placeholder { color: var(--text-lo); }
+
+.editor-actions {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  background: var(--surface);
+}
+.btn-run {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--accent); border: none; color: #fff;
+  font-size: 12.5px; font-weight: 600; border-radius: var(--r-sm);
+  padding: 7px 16px; transition: opacity .15s, box-shadow .15s;
+}
+.btn-run:hover { opacity: .9; box-shadow: 0 0 16px var(--accent-med); }
+.btn-run:disabled { opacity: .4; cursor: default; box-shadow: none; }
+.kbd-hint { font-size: 11px; color: var(--text-lo); font-family: var(--mono); }
+.btn-ghost {
+  background: none; border: 1px solid var(--border); color: var(--text-lo);
+  font-size: 11.5px; font-weight: 500; border-radius: var(--r-sm); padding: 5px 10px;
+  transition: border-color .12s, color .12s, background .12s;
+}
+.btn-ghost:hover { border-color: var(--border-hi); color: var(--text); background: var(--card); }
+
+#results-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.results-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex-shrink: 0;
+}
+#results-meta { font-size: 11.5px; color: var(--text-lo); font-family: var(--mono); flex: 1; }
+.results-scroll { flex: 1; overflow: auto; }
+
+.results-table { width: 100%; border-collapse: collapse; font-family: var(--mono); }
+.results-table thead th {
+  background: var(--card); color: var(--text-lo); font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .06em; padding: 8px 14px;
+  border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
+  white-space: nowrap; text-align: left; position: sticky; top: 0; z-index: 1;
+}
+.results-table tbody td {
+  font-size: 12.5px; color: var(--text-hi); padding: 7px 14px;
+  border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
+  max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.results-table tbody tr:nth-child(even) td { background: rgba(255,255,255,.015); }
+.results-table tbody tr:hover td { background: var(--accent-dim); }
+.null-val { color: var(--text-lo); font-style: italic; }
+.results-msg { padding: 28px 20px; font-size: 13px; color: var(--text-lo); }
+.results-msg.ok { color: var(--green); }
+
+/* ─── AUTOCOMPLETE ───────────────────────────────────────── */
+#ac-popup {
+  position: fixed; z-index: 9000;
+  background: var(--card); border: 1px solid var(--border-hi);
+  border-radius: var(--r); padding: 4px;
+  min-width: 200px; max-width: 300px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5), 0 0 0 1px rgba(124,110,247,.08);
+}
+.ac-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 6px 10px; border-radius: var(--r-sm); cursor: pointer;
+  font-family: var(--mono); font-size: 12.5px; color: var(--text);
+  transition: background .08s;
+}
+.ac-item:hover, .ac-selected { background: var(--accent-dim); }
+.ac-selected .ac-label { color: var(--accent); }
+.ac-type {
+  font-family: var(--sans); font-size: 10px; font-weight: 500; letter-spacing: .04em;
+  padding: 2px 6px; border-radius: 99px; flex-shrink: 0;
+}
+.ac-kw   { background: rgba(124,110,247,.15); color: var(--accent); }
+.ac-tbl  { background: rgba(56,189,248,.12);  color: var(--sky); }
+.ac-col  { background: rgba(74,222,128,.12);  color: var(--green); }
+
+/* ─── CONNECT TAB ────────────────────────────────────────── */
+#tab-connect { flex: 1; overflow-y: auto; padding: 0; }
+.connect-section { padding: 20px 20px 0; }
+.connect-section:last-child { padding-bottom: 20px; }
+.section-heading {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-lo); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.section-heading::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.connect-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .connect-grid { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.card-title { font-size: 12px; font-weight: 600; color: var(--text-hi); margin-bottom: 2px; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 11px; font-weight: 500; color: var(--text-lo); }
+.field input, .field select {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+  color: var(--text-hi); font-size: 12.5px; padding: 8px 10px; outline: none; width: 100%;
+  transition: border-color .15s;
+}
+.field input:focus, .field select:focus { border-color: var(--accent-med); box-shadow: 0 0 0 2px var(--accent-dim); }
+.field input::placeholder { color: var(--text-lo); }
+.field select option { background: var(--card); }
+.field-row { flex-direction: row; gap: 8px; }
+.field-row > * { flex: 1; min-width: 0; }
+.field-row > .narrow { flex: 0 0 90px; }
+
+.input-with-btn { display: flex; gap: 6px; }
+.input-with-btn input { flex: 1; }
+.btn-inline {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
+  color: var(--text); font-size: 11.5px; font-weight: 500; padding: 0 10px;
+  white-space: nowrap; flex-shrink: 0; transition: border-color .12s, background .12s;
+}
+.btn-inline:hover { border-color: var(--border-hi); background: var(--card-hi); }
+
+.btn-primary {
+  background: var(--accent); border: none; border-radius: var(--r-sm);
+  color: #fff; font-size: 12.5px; font-weight: 600;
+  padding: 9px 16px; width: 100%; margin-top: 2px;
+  transition: opacity .15s, box-shadow .15s;
+}
+.btn-primary:hover { opacity: .88; box-shadow: 0 4px 16px var(--accent-med); }
+.btn-primary:disabled { opacity: .35; cursor: default; box-shadow: none; }
+
+.conn-list { display: flex; flex-direction: column; gap: 6px; }
+.conn-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 9px 12px;
+}
+.conn-indicator { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
+.conn-name { flex: 1; font-size: 12.5px; font-family: var(--mono); color: var(--text-hi); }
+.btn-disconnect {
+  background: none; border: none; color: var(--text-lo); font-size: 14px;
+  width: 24px; height: 24px; border-radius: var(--r-sm); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s, color .12s;
+}
+.btn-disconnect:hover { background: var(--red-dim); color: var(--red); }
+
+/* ─── MODAL ──────────────────────────────────────────────── */
+.modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 8000; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(4px); }
+.modal-box {
+  position: relative; z-index: 1;
+  background: var(--card); border: 1px solid var(--border-hi);
+  border-radius: 12px; width: min(600px, 94vw); max-height: 82vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.modal-title { font-size: 13px; font-weight: 600; color: var(--text-hi); }
+.modal-footer {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 18px; border-top: 1px solid var(--border); flex-shrink: 0;
+}
+
+/* FS Browser */
+.fs-crumb {
+  padding: 8px 18px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px;
+  font-size: 12px; font-family: var(--mono); color: var(--text-lo); flex-shrink: 0;
+}
+.bc-seg { cursor: pointer; color: var(--text); border-radius: 3px; padding: 1px 3px; transition: color .1s; }
+.bc-seg:hover { color: var(--accent); }
+.bc-slash { color: var(--text-lo); }
+.fs-list { flex: 1; overflow-y: auto; min-height: 100px; max-height: 360px; }
+.fs-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 18px;
+  cursor: pointer; transition: background .1s; border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+.fs-row:hover { background: var(--card-hi); }
+.fs-row.selected { background: var(--accent-dim); }
+.fs-icon { font-size: 14px; flex-shrink: 0; }
+.fs-name { flex: 1; font-size: 12.5px; font-family: var(--mono); color: var(--text-hi); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fs-meta { font-size: 11px; color: var(--text-lo); flex-shrink: 0; }
+.fs-dir .fs-icon  { color: var(--amber); }
+.fs-file .fs-icon { color: var(--sky); }
+.fs-msg { padding: 20px; font-size: 12.5px; color: var(--text-lo); text-align: center; }
+.fs-err { color: var(--red); }
+.fs-selected-label { flex: 1; font-size: 11.5px; font-family: var(--mono); color: var(--text-lo); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
 </head>
 <body>
 
-    <div id="login-overlay">
-        <div class="card">
-            <h2>Authenticating...</h2>
-            <p id="auth-status">Verifying token...</p>
+<!-- AUTOCOMPLETE POPUP -->
+<div id="ac-popup" hidden></div>
+
+<!-- TOASTS -->
+<div id="toasts"></div>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🗄️</div>
+    <div class="auth-title">DBManager</div>
+    <div class="auth-sub">Minecraft database management console</div>
+    <div id="auth-status">Initializing…</div>
+    <div class="auth-hint">Run <kbd>/db web</kbd> in-game to get a login link</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" hidden>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">🗄️</div>
+      <span class="sidebar-name">DBManager</span>
+      <button id="sidebar-refresh" class="icon-btn" title="Refresh">↺</button>
+    </div>
+    <div class="sidebar-section">Connections</div>
+    <div id="db-list" class="db-list"></div>
+    <div class="sidebar-footer">
+      <button id="open-connect-btn" class="btn-sidebar-add">+ Add connection</button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div id="main">
+    <nav class="tab-bar">
+      <button class="tab active" data-tab="query">Query</button>
+      <button class="tab" data-tab="connect">Connect</button>
+    </nav>
+
+    <!-- ── QUERY TAB ── -->
+    <div id="tab-query" class="tab-pane">
+      <div class="query-bar">
+        <div class="db-badge" id="active-db-badge">No database selected</div>
+        <span id="query-timing" class="query-timing"></span>
+      </div>
+      <div class="editor-wrap">
+        <textarea id="sql-input" spellcheck="false"
+          placeholder="SELECT * FROM table LIMIT 100;&#10;&#10;-- Ctrl+Enter to run · Tab completes"></textarea>
+      </div>
+      <div class="editor-actions">
+        <button id="run-btn" class="btn-run">
+          <span>▶</span> Run Query
+        </button>
+        <span class="kbd-hint">Ctrl+Enter</span>
+        <div style="flex:1"></div>
+        <button id="clear-btn" class="btn-ghost">Clear</button>
+      </div>
+      <div id="results-area" hidden>
+        <div class="results-bar">
+          <span id="results-meta"></span>
+          <button id="export-csv-btn" class="btn-ghost" hidden>Export CSV</button>
         </div>
+        <div class="results-scroll">
+          <div id="results-container"></div>
+        </div>
+      </div>
     </div>
 
-    <div id="sidebar">
-        <h2>DBManager</h2>
-        <div id="db-list">
-            <p>Loading databases...</p>
+    <!-- ── CONNECT TAB ── -->
+    <div id="tab-connect" class="tab-pane" hidden>
+
+      <!-- Add Connection -->
+      <div class="connect-section">
+        <div class="section-heading">Add Connection</div>
+        <div class="connect-grid">
+
+          <div class="card">
+            <div class="card-title">SQLite File</div>
+            <div class="field"><label>Connection name</label>
+              <input id="sq-name" type="text" placeholder="my_database" autocomplete="off">
+            </div>
+            <div class="field"><label>File path</label>
+              <div class="input-with-btn">
+                <input id="sq-path" type="text" placeholder="/path/to/file.db" autocomplete="off">
+                <button id="sq-browse-btn" class="btn-inline">Browse…</button>
+              </div>
+            </div>
+            <button id="sq-connect-btn" class="btn-primary">Connect</button>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Remote Server</div>
+            <div class="field"><label>Connection name</label>
+              <input id="rm-name" type="text" placeholder="production" autocomplete="off">
+            </div>
+            <div class="field"><label>Type</label>
+              <select id="rm-type">
+                <option value="mysql">MySQL / MariaDB</option>
+                <option value="postgresql">PostgreSQL</option>
+              </select>
+            </div>
+            <div class="field field-row">
+              <div class="field"><label>Host</label>
+                <input id="rm-host" type="text" placeholder="localhost" autocomplete="off">
+              </div>
+              <div class="field narrow"><label>Port</label>
+                <input id="rm-port" type="number" placeholder="3306" autocomplete="off">
+              </div>
+            </div>
+            <div class="field"><label>Database</label>
+              <input id="rm-database" type="text" placeholder="mydb" autocomplete="off">
+            </div>
+            <div class="field field-row">
+              <div class="field"><label>Username</label>
+                <input id="rm-user" type="text" placeholder="root" autocomplete="off">
+              </div>
+              <div class="field"><label>Password</label>
+                <input id="rm-pass" type="password" placeholder="••••••" autocomplete="off">
+              </div>
+            </div>
+            <button id="rm-connect-btn" class="btn-primary">Connect</button>
+          </div>
+
         </div>
+      </div>
+
+      <!-- Create Database -->
+      <div class="connect-section">
+        <div class="section-heading">Create Database</div>
+        <div class="connect-grid">
+
+          <div class="card">
+            <div class="card-title">New SQLite Database</div>
+            <div class="field"><label>Connection name</label>
+              <input id="cr-sq-name" type="text" placeholder="new_database" autocomplete="off">
+            </div>
+            <div class="field"><label>Directory</label>
+              <div class="input-with-btn">
+                <input id="cr-sq-dir" type="text" placeholder="(server root)" autocomplete="off">
+                <button id="cr-sq-browse-btn" class="btn-inline">Browse…</button>
+              </div>
+            </div>
+            <div class="field"><label>Filename (auto-appends .db)</label>
+              <input id="cr-sq-file" type="text" placeholder="my_database" autocomplete="off">
+            </div>
+            <button id="cr-sq-btn" class="btn-primary">Create &amp; Connect</button>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Create on Remote Server</div>
+            <div class="field"><label>Via connection</label>
+              <select id="cr-rm-via"><option value="">— select a connection —</option></select>
+            </div>
+            <div class="field"><label>New database name</label>
+              <input id="cr-rm-dbname" type="text" placeholder="new_schema" autocomplete="off">
+            </div>
+            <button id="cr-rm-btn" class="btn-primary">Create Database</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Active Connections -->
+      <div class="connect-section">
+        <div class="section-heading">Active Connections</div>
+        <div id="active-conns-list" class="conn-list"></div>
+      </div>
+
+    </div><!-- /tab-connect -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- FS BROWSER MODAL -->
+<div id="fs-modal" class="modal" hidden>
+  <div class="modal-backdrop"></div>
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">Browse Server Filesystem</span>
+      <button id="fs-close-btn" class="icon-btn" style="font-size:16px">✕</button>
     </div>
-
-    <div id="content">
-        <div class="card">
-            <h2>SQL Console</h2>
-            <select id="db-select">
-                <option value="">Select a database</option>
-            </select>
-            <textarea id="sql-input" placeholder="SELECT * FROM table LIMIT 10;"></textarea>
-            <button id="run-btn">Execute Query</button>
-        </div>
-
-        <div id="results-card" class="card hidden">
-            <h2>Results</h2>
-            <div id="results-table-container" style="overflow-x: auto;"></div>
-        </div>
+    <div class="fs-crumb" id="fs-crumb"></div>
+    <div id="fs-list" class="fs-list"></div>
+    <div class="modal-footer">
+      <span id="fs-selected-label" class="fs-selected-label">Nothing selected</span>
+      <button id="fs-select-dir-btn" class="btn-ghost" hidden>Use this folder</button>
+      <button id="fs-select-file-btn" class="btn-primary" style="width:auto;margin-top:0" disabled>Use this file</button>
     </div>
+  </div>
+</div>
 
-    <script src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

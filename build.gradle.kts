@@ -23,15 +23,25 @@ dependencies {
     implementation("io.ktor:ktor-server-cors:2.3.10")
     implementation("io.ktor:ktor-server-content-negotiation:2.3.10")
     implementation("io.ktor:ktor-serialization-gson:2.3.10")
+    // Adventure — shaded so it works on Spigot servers without bundled Adventure
+    implementation("net.kyori:adventure-api:4.17.0")
+    implementation("net.kyori:adventure-platform-bukkit:4.3.4")
+    implementation("net.kyori:adventure-text-minimessage:4.17.0")
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(17)
 }
 
 tasks {
     build {
         dependsOn(shadowJar)
+    }
+
+    shadowJar {
+        // Relocate shaded Adventure so it doesn't conflict with Paper's built-in Adventure
+        relocate("net.kyori.adventure", "io.github.earth1283.dBManager.libs.adventure")
+        relocate("net.kyori.examination", "io.github.earth1283.dBManager.libs.examination")
     }
 
     runServer {
