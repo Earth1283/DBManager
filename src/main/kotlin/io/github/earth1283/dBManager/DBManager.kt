@@ -1,15 +1,24 @@
 package io.github.earth1283.dBManager
 
+import io.github.earth1283.dBManager.database.ConnectionManager
 import org.bukkit.plugin.java.JavaPlugin
 
 class DBManager : JavaPlugin() {
+    companion object {
+        lateinit var connectionManager: ConnectionManager
+            private set
+    }
 
     override fun onEnable() {
         saveDefaultConfig()
-        logger.info("DBManager starting up!")
+        connectionManager = ConnectionManager(dataFolder)
+        connectionManager.loadFromConfig(config.getConfigurationSection("databases"))
+        logger.info("DBManager initialized ${connectionManager.getAvailableDatabases().size} pools.")
     }
 
     override fun onDisable() {
-        // Plugin shutdown logic
+        if (::connectionManager.isInitialized) {
+            connectionManager.closeAll()
+        }
     }
 }
