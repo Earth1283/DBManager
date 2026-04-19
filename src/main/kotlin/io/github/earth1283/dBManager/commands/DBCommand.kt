@@ -16,6 +16,7 @@ class DBCommand : CommandExecutor {
         if (args.isEmpty()) {
             sender.sendMessage("/db list - List databases")
             sender.sendMessage("/db execute <db> <sql> - Execute SQL")
+            sender.sendMessage("/db web - Generate Web UI login link")
             return true
         }
 
@@ -42,6 +43,14 @@ class DBCommand : CommandExecutor {
                 } catch (e: Exception) {
                     sender.sendMessage("Error: ${e.message}")
                 }
+            }
+            "web" -> {
+                val token = java.util.UUID.randomUUID().toString()
+                // valid for 5 minutes
+                DBManager.webServer?.pendingTokens?.put(token, System.currentTimeMillis() + 300000)
+                val port = DBManager.getPlugin(DBManager::class.java).config.getInt("web-ui.port", 8080)
+                sender.sendMessage("Web UI login token generated. Valid for 5 minutes.")
+                sender.sendMessage("Link: http://your-server-ip:$port/?token=$token")
             }
         }
         return true
