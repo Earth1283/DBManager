@@ -11,6 +11,9 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.request.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.serialization.gson.*
+import io.ktor.server.http.content.*
 import java.util.UUID
 
 class WebServer(private val port: Int) {
@@ -22,15 +25,21 @@ class WebServer(private val port: Int) {
 
     fun start() {
         server = embeddedServer(Netty, port = port) {
+            install(ContentNegotiation) {
+                gson {
+                    setPrettyPrinting()
+                }
+            }
             install(CORS) {
                 anyHost()
                 allowHeader(HttpHeaders.ContentType)
                 allowHeader("Authorization")
             }
             routing {
-                // SPA Fallback
-                get("/") {
-                    call.respondText("DBManager Web UI (Static files not yet bundled)", ContentType.Text.Html)
+                // Serve static files
+                static("/") {
+                    resources("web")
+                    defaultResource("web/index.html")
                 }
 
                 // Auth Endpoints
@@ -62,24 +71,24 @@ class WebServer(private val port: Int) {
                     }
 
                     get("/databases") {
-                        val dbs = DBManager.connectionManager.getAvailableDatabases()
-                        call.respondText(Gson().toJson(dbs), ContentType.Application.Json)
+                        val dbs = DBManager.connectionManager?.getAvailableDatabases() ?: emptySet()
+                        call.respond(dbs)
                     }
 
                     get("/databases/{db}/tables") {
                         val db = call.parameters["db"] ?: return@get
-                        val ds = DBManager.connectionManager.getDataSource(db)
+                        val ds = DBManager.connectionManager?.getDataSource(db)
                         if (ds == null) {
                             call.respond(HttpStatusCode.NotFound, mapOf("error" to "DB not found"))
                             return@get
                         }
                         val tables = DatabaseExplorer.getTables(ds)
-                        call.respondText(Gson().toJson(tables), ContentType.Application.Json)
+                        call.respond(tables)
                     }
 
                     post("/databases/{db}/query") {
                         val db = call.parameters["db"] ?: return@post
-                        val ds = DBManager.connectionManager.getDataSource(db)
+                        val ds = DBManager.connectionManager?.getDataSource(db)
                         if (ds == null) {
                             call.respond(HttpStatusCode.NotFound, mapOf("error" to "DB not found"))
                             return@post
@@ -87,7 +96,7 @@ class WebServer(private val port: Int) {
                         val sql = call.receiveText()
                         try {
                              val result = DatabaseExplorer.executeQuery(ds, sql)
-                             call.respondText(Gson().toJson(result), ContentType.Application.Json)
+                             call.respond(result)
                         } catch (e: Exception) {
                              call.respond(HttpStatusCode.BadRequest, mapOf("error" to e.message))
                         }
