@@ -1,0 +1,20 @@
+web-ui:
+  enabled: true
+  port: 8080
+
+databases:
+  default_sqlite:
+    type: "sqlite"
+    file: "database.db"
+    pool:
+      maximumPoolSize: 10
+      minimumIdle: 2
+  # main_mysql:
+  #   type: "mysql"
+  #   host: "localhost"
+  #   port: 3306
+  #   database: "server_data"
+  #   username: "root"
+  #   password: "password"
+  #   pool:
+  #     maximumPoolSize: 20
