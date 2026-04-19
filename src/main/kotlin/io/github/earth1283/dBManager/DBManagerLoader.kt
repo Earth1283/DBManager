@@ -1,4 +1,4 @@
-package io.github.Earth1283.dBManager
+package io.github.earth1283.dBManager
 
 import io.papermc.paper.plugin.loader.PluginClasspathBuilder
 import io.papermc.paper.plugin.loader.PluginLoader

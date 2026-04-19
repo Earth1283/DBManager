@@ -1,4 +1,4 @@
-package io.github.Earth1283.dBManager
+package io.github.earth1283.dBManager
 
 import org.bukkit.plugin.java.JavaPlugin
 

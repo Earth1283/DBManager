@@ -1,7 +1,7 @@
 name: DBManager
 version: '${version}'
 
-main: io.github.Earth1283.dBManager.DBManager
+main: io.github.earth1283.dBManager.DBManager
 paperPluginLoader: io.github.Earth1283.dBManager.DBManagerLoader
 api-version: '1.20'
 load: STARTUP
