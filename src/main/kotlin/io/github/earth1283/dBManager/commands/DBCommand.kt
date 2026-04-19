@@ -5,6 +5,7 @@ import io.github.earth1283.dBManager.database.DatabaseExplorer
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
+import org.bukkit.entity.Player
 
 class DBCommand : CommandExecutor {
     override fun onCommand(sender: CommandSender, command: Command, label: String, args: Array<out String>): Boolean {
@@ -16,6 +17,7 @@ class DBCommand : CommandExecutor {
         if (args.isEmpty()) {
             sender.sendMessage("/db list - List databases")
             sender.sendMessage("/db execute <db> <sql> - Execute SQL")
+            sender.sendMessage("/db gui - Open Experimental GUI")
             sender.sendMessage("/db web - Generate Web UI login link")
             return true
         }
@@ -43,6 +45,14 @@ class DBCommand : CommandExecutor {
                 } catch (e: Exception) {
                     sender.sendMessage("Error: ${e.message}")
                 }
+            }
+            "gui" -> {
+                if (sender !is Player) {
+                    sender.sendMessage("Players only.")
+                    return true
+                }
+                sender.sendMessage("§cOpening Experimental GUI...")
+                io.github.earth1283.dBManager.gui.DatabaseGUI.openDatabaseList(sender)
             }
             "web" -> {
                 val token = java.util.UUID.randomUUID().toString()
