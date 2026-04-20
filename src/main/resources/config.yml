@@ -1,20 +1,90 @@
+# ─────────────────────────────────────────────────────────────────
+#  DBManager — config.yml
+#  Changes take effect on /reload or server restart unless noted.
+#  Settings marked [live] can also be updated from the Web UI
+#  Settings panel without a restart.
+# ─────────────────────────────────────────────────────────────────
+
 web-ui:
+  # Whether to start the built-in HTTP server at all.
   enabled: true
+
+  # TCP port for the web UI. Requires restart to change.
   port: 8080
 
+  # Network interface to bind to. Use "0.0.0.0" for all interfaces,
+  # "127.0.0.1" to restrict to localhost only. Requires restart.
+  bind-address: "0.0.0.0"
+
+  # How long a /db web login token stays valid (minutes). [live]
+  token-expiry-minutes: 5
+
+  # How long a browser session stays authenticated (hours).
+  # Set to 0 to make sessions permanent until the server restarts. [live]
+  session-expiry-hours: 24
+
+  # Maximum number of simultaneous active sessions. [live]
+  max-sessions: 10
+
+  # Hard cap on the number of rows returned by a single query.
+  # Protects against runaway SELECT * on huge tables. [live]
+  max-result-rows: 1000
+
+  # Allow CREATE / DROP / ALTER / TRUNCATE statements via the web UI. [live]
+  allow-ddl: true
+
+  # Allow INSERT / UPDATE / DELETE / REPLACE statements via the web UI. [live]
+  allow-dml: true
+
+# ─────────────────────────────────────────────────────────────────
+#  Database connections
+#  Each key under "databases:" becomes a named connection pool.
+#  Pool settings are per-connection and apply at startup / reload.
+# ─────────────────────────────────────────────────────────────────
 databases:
   default_sqlite:
     type: "sqlite"
+    # Path is relative to the DBManager plugin data folder.
     file: "database.db"
     pool:
-      maximumPoolSize: 10
-      minimumIdle: 2
+      maximumPoolSize: 10       # max total connections in the pool
+      minimumIdle: 2            # connections kept open when idle
+      connectionTimeout: 5000   # ms — how long to wait for a free connection
+      idleTimeout: 600000       # ms — how long idle connections are kept (10 min)
+      maxLifetime: 1800000      # ms — max age of any connection (30 min)
+      keepAliveTime: 30000      # ms — ping interval to prevent firewall drops (0 = off)
+      leakDetectionThreshold: 0 # ms — warn if a connection is held this long (0 = off)
+
+  # Example MySQL / MariaDB connection:
   # main_mysql:
   #   type: "mysql"
   #   host: "localhost"
   #   port: 3306
   #   database: "server_data"
   #   username: "root"
-  #   password: "password"
+  #   password: "change_me"
   #   pool:
   #     maximumPoolSize: 20
+  #     minimumIdle: 5
+  #     connectionTimeout: 8000
+  #     idleTimeout: 600000
+  #     maxLifetime: 1800000
+  #     keepAliveTime: 60000
+  #     leakDetectionThreshold: 0
+
+  # Example PostgreSQL connection:
+  # analytics_pg:
+  #   type: "postgresql"
+  #   host: "localhost"
+  #   port: 5432
+  #   database: "analytics"
+  #   username: "postgres"
+  #   password: "change_me"
+  #   pool:
+  #     maximumPoolSize: 15
+  #     minimumIdle: 3
+  #     connectionTimeout: 8000
+  #     idleTimeout: 600000
+  #     maxLifetime: 1800000
+  #     keepAliveTime: 60000
+  #     leakDetectionThreshold: 0

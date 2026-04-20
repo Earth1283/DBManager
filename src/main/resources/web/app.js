@@ -200,9 +200,10 @@ function renderSidebar() {
     item.querySelector('.db-row').addEventListener('click', () => toggleDbExpand(db));
     item.querySelectorAll('.db-table-item').forEach(el => el.addEventListener('click', () => {
       setActiveDb(db);
-      document.getElementById('sql-input').value = `SELECT * FROM \`${el.dataset.table}\` LIMIT 100;`;
+      document.getElementById('sql-input').value = `SELECT * FROM \`${el.dataset.table}\` LIMIT 200;`;
       switchTab('query');
       AUTOCOMPLETE.hide();
+      runQuery();
     }));
 
     list.appendChild(item);
